@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Canecas Shop{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,500&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bone: #F6F1E7;
+            --surface: #FBF8F2;
+            --ink: #2B2420;
+            --ink-soft: #6E6255;
+            --clay: #A8542F;
+            --glaze: #55705C;
+            --mustard: #C68B3E;
+            --line: #DDD3C0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Work Sans', sans-serif;
+            background: var(--bone);
+            color: var(--ink);
+            line-height: 1.5;
+        }
+
+        a { color: inherit; }
+        a:focus-visible, button:focus-visible {
+            outline: 2px solid var(--glaze);
+            outline-offset: 3px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 28px 48px 20px;
+            border-bottom: 1px solid var(--line);
+        }
+        header .wordmark {
+            font-family: 'Fraunces', serif;
+            font-style: italic;
+            font-weight: 600;
+            font-size: 1.5rem;
+            letter-spacing: 0.01em;
+        }
+        header .cart-status {
+            font-size: 0.85rem;
+            color: var(--ink-soft);
+        }
+
+        main { padding: 48px; max-width: 980px; margin: 0 auto; }
+
+        footer {
+            text-align: center;
+            padding: 32px 20px;
+            color: var(--ink-soft);
+            font-size: 0.8rem;
+            border-top: 1px solid var(--line);
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/" class="wordmark" style="text-decoration:none;">Canecas Shop</a>
+        <div class="cart-status">Carrinho — em breve</div>
+    </header>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        Sistema de vendas de canecas — projeto acadêmico
+    </footer>
+</body>
+</html>
