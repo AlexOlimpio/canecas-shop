@@ -26,3 +26,5 @@ jobs:
 
       - name: Rodar testes
         run: pytest tests/ -v
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
