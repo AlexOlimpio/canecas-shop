@@ -3,6 +3,11 @@ Camada de APRESENTAÇÃO (Presentation Layer)
 Rotas Flask — recebem as requisições e devolvem HTML, sempre delegando
 as regras de negócio para a camada de services.
 """
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from flask import Flask, render_template
 from database.db import init_db
 from services import produto_service
@@ -23,6 +28,7 @@ def detalhe_produto(produto_id):
     return render_template("produto.html", produto=produto)
 
 
+init_db()
+
 if __name__ == "__main__":
-    init_db()
     app.run(debug=True, host="0.0.0.0", port=5000)

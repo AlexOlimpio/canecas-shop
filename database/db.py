@@ -1,20 +1,22 @@
 """
 Camada de DADOS (Data Layer)
-Responsável por toda a comunicação com o banco de dados (SQLite).
+Responsável por toda a comunicação com o banco de dados (PostgreSQL / Aiven).
 """
-import sqlite3
 import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
-if os.environ.get("RENDER"):
-    DB_PATH = "/tmp/canecas.db"
-else:
-    DB_PATH = os.path.join(os.path.dirname(__file__), "canecas.db")
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    if not DATABASE_URL:
+        raise RuntimeError(
+            "DATABASE_URL não configurada. Defina a variável de ambiente "
+            "(arquivo .env local ou Environment do Render) com a connection "
+            "string do Postgres."
+        )
+    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 
 def init_db():
@@ -24,7 +26,7 @@ def init_db():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS produtos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             nome TEXT NOT NULL,
             descricao TEXT,
             preco REAL NOT NULL,
@@ -37,33 +39,30 @@ def init_db():
     # todas pelo mesmo preço do produto — usado no slideshow e na página de detalhe.
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS variantes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            produto_id INTEGER NOT NULL,
+            id SERIAL PRIMARY KEY,
+            produto_id INTEGER NOT NULL REFERENCES produtos (id),
             nome TEXT NOT NULL,
             imagem_url TEXT,
-            estoque INTEGER DEFAULT 0,
-            FOREIGN KEY (produto_id) REFERENCES produtos (id)
+            estoque INTEGER DEFAULT 0
         )
     """)
 
     # AC2/AC3 (carrinho e pedidos) — tabelas já preparadas para os próximos sprints
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS pedidos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            data_criacao TEXT DEFAULT CURRENT_TIMESTAMP,
+            id SERIAL PRIMARY KEY,
+            data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             total REAL DEFAULT 0
         )
     """)
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS itens_pedido (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            pedido_id INTEGER,
-            produto_id INTEGER,
+            id SERIAL PRIMARY KEY,
+            pedido_id INTEGER REFERENCES pedidos (id),
+            produto_id INTEGER REFERENCES produtos (id),
             quantidade INTEGER,
-            preco_unitario REAL,
-            FOREIGN KEY (pedido_id) REFERENCES pedidos (id),
-            FOREIGN KEY (produto_id) REFERENCES produtos (id)
+            preco_unitario REAL
         )
     """)
 
@@ -71,7 +70,7 @@ def init_db():
 
     # Seed inicial — só insere se a tabela estiver vazia
     cursor.execute("SELECT COUNT(*) FROM produtos")
-    if cursor.fetchone()[0] == 0:
+    if cursor.fetchone()["count"] == 0:
         produtos_exemplo = [
             ("Caneca Geek Python", "Caneca de porcelana 300ml com estampa da logo Python", 39.90,
              "/static/img/python-a.jpg", 15),
@@ -83,14 +82,14 @@ def init_db():
              "https://picsum.photos/seed/uni-a/300/300", 8),
         ]
         cursor.executemany(
-            "INSERT INTO produtos (nome, descricao, preco, imagem_url, estoque) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO produtos (nome, descricao, preco, imagem_url, estoque) VALUES (%s, %s, %s, %s, %s)",
             produtos_exemplo
         )
         conn.commit()
 
         # Duas opções (variantes) por produto, mesmo preço do produto principal
         variantes_seeds = {
-            "Caneca Geek Python": [("Fundo branco", "python-a"), ("Fundo preto", "python-b")],
+            "Caneca Geek Python": [("Fundo branco", "python-b"), ("Fundo preto", "python-a")],
             "Caneca Café da Manhã": [("Bege", "coffee-a"), ("Listrada", "coffee-b")],
             "Caneca Personalizada": [("Azul mágica", "magic-a"), ("Vermelha mágica", "magic-b")],
             "Caneca Universitária": [("Com alça", "uni-a"), ("Térmica lisa", "uni-b")],
@@ -99,7 +98,9 @@ def init_db():
         # com placeholder até as fotos correspondentes serem enviadas.
         fotos_locais = {"python-a", "python-b"}
 
-        produtos_ids = {row["nome"]: row["id"] for row in cursor.execute("SELECT id, nome FROM produtos")}
+        cursor.execute("SELECT id, nome FROM produtos")
+        produtos_ids = {row["nome"]: row["id"] for row in cursor.fetchall()}
+
         variantes_exemplo = []
         for nome_produto, opcoes in variantes_seeds.items():
             produto_id = produtos_ids[nome_produto]
@@ -113,32 +114,42 @@ def init_db():
                     (produto_id, nome_variante, imagem_url, estoque_base)
                 )
         cursor.executemany(
-            "INSERT INTO variantes (produto_id, nome, imagem_url, estoque) VALUES (?, ?, ?, ?)",
+            "INSERT INTO variantes (produto_id, nome, imagem_url, estoque) VALUES (%s, %s, %s, %s)",
             variantes_exemplo
         )
         conn.commit()
 
+    cursor.close()
     conn.close()
 
 
 def listar_produtos():
     conn = get_connection()
-    produtos = conn.execute("SELECT * FROM produtos ORDER BY id").fetchall()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM produtos ORDER BY id")
+    produtos = cursor.fetchall()
+    cursor.close()
     conn.close()
     return produtos
 
 
 def buscar_produto_por_id(produto_id):
     conn = get_connection()
-    produto = conn.execute("SELECT * FROM produtos WHERE id = ?", (produto_id,)).fetchone()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM produtos WHERE id = %s", (produto_id,))
+    produto = cursor.fetchone()
+    cursor.close()
     conn.close()
     return produto
 
 
 def listar_variantes_por_produto(produto_id):
     conn = get_connection()
-    variantes = conn.execute(
-        "SELECT * FROM variantes WHERE produto_id = ? ORDER BY id", (produto_id,)
-    ).fetchall()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT * FROM variantes WHERE produto_id = %s ORDER BY id", (produto_id,)
+    )
+    variantes = cursor.fetchall()
+    cursor.close()
     conn.close()
     return variantes
