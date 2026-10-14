@@ -153,3 +153,21 @@ def listar_variantes_por_produto(produto_id):
     cursor.close()
     conn.close()
     return variantes
+
+def buscar_variante_com_produto(variante_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT v.id, v.nome AS variante_nome, v.imagem_url, v.estoque,
+               p.id AS produto_id, p.nome AS produto_nome, p.preco
+        FROM variantes v
+        JOIN produtos p ON p.id = v.produto_id
+        WHERE v.id = %s
+        """,
+        (variante_id,),
+    )
+    item = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return item

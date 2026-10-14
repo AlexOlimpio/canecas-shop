@@ -67,7 +67,7 @@
 <body>
     <header>
         <a href="/" class="wordmark" style="text-decoration:none;">Canecas Shop</a>
-        <div class="cart-status">Carrinho — em breve</div>
+        <div class="cart-status"><a href="/carrinho" style="color: inherit; text-decoration: none;">Carrinho{% if cart_count %} ({{ cart_count }}){% endif %}</a></div>
     </header>
     <main>
         {% block content %}{% endblock %}

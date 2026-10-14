@@ -18,12 +18,18 @@
         <h3 style="font-family: 'Fraunces', serif; font-weight: 500; font-size: 1.1rem; margin-bottom: 4px;">{{ opcao.nome }}</h3>
         {% if not opcao.disponivel %}
         <p style="font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 12px;">Esgotado</p>
+        <button disabled style="width: 100%; padding: 12px; background: var(--line); color: var(--ink-soft); border: none; font-family: 'Work Sans', sans-serif; font-size: 0.9rem; cursor: not-allowed;">
+            Esgotado
+        </button>
         {% else %}
         <p style="font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 12px;">Disponível</p>
+        <form action="/carrinho/adicionar/{{ opcao.id }}" method="post">
+            <input type="hidden" name="quantidade" value="1">
+            <button type="submit" style="width: 100%; padding: 12px; background: var(--clay); color: #fff; border: none; font-family: 'Work Sans', sans-serif; font-size: 0.9rem; cursor: pointer;">
+                Adicionar ao carrinho
+            </button>
+        </form>
         {% endif %}
-        <button disabled style="width: 100%; padding: 12px; background: var(--line); color: var(--ink-soft); border: none; font-family: 'Work Sans', sans-serif; font-size: 0.9rem; cursor: not-allowed;">
-            Escolher esta opção — em breve
-        </button>
     </div>
     {% endfor %}
 </div>
