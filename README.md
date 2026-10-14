@@ -1,134 +1,143 @@
-# 🍺 Canecas Shop
+# Canecas Shop
 
-Sistema de vendas de canecas online, desenvolvido para a disciplina de Software Product.
+Sistema web de e-commerce de canecas personalizadas, desenvolvido para a disciplina **Software Product**. O projeto conta com arquitetura em camadas (Apresentação / Negócio / Dados), com back-end em Flask (Python), banco de dados PostgreSQL e execução via Docker.
 
-## Integrante(s) do grupo
+**Autor:** Alex Wagner Olímpio Pires — RA 2403006 (projeto individual)
 
-- Alex Wagner Olímpio Pires — RA: 2403006
+## 🛠 Tecnologias Utilizadas
 
-## Arquitetura (3 camadas)
+* **Front-end:** HTML5, CSS3 e templates Jinja2 (renderizados pelo Flask).
+* **Back-end:** Python 3, Flask 3.0.3, Gunicorn.
+* **Banco de Dados:** PostgreSQL (Aiven), acesso via psycopg2 com consultas parametrizadas.
+* **Testes:** pytest (testes unitários de regra de negócio e testes de rotas com `test_client`).
+* **Infraestrutura:** Docker, GitHub Actions (CI) e Render (deploy).
 
-- **Apresentação**: rotas Flask + templates HTML (`app.py`, `templates/`)
-- **Negócio**: regras da aplicação (`services/`)
-- **Dados**: acesso ao banco PostgreSQL, hospedado no Aiven (`database/`)
+## 🏗 Arquitetura
 
-### Estrutura do projeto
+O código é dividido em três camadas, e cada uma só conversa com a camada vizinha:
 
 ```
-canecas-shop/
-├── app.py                        # rotas Flask (apresentação)
-├── database/
-│   └── db.py                     # acesso ao PostgreSQL (dados)
-├── services/
-│   ├── produto_service.py        # catálogo (negócio)
-│   └── carrinho_service.py       # carrinho de compras (negócio)
-├── templates/                    # base, catálogo, produto e carrinho
-├── static/                       # imagens e estilos
-├── tests/                        # testes automatizados (pytest)
-├── Dockerfile
-└── requirements.txt
+app.py + templates/     -> Apresentação (rotas Flask e páginas HTML)
+services/               -> Negócio (regras do carrinho, preços, estoque)
+database/               -> Dados (conexão e consultas SQL)
+tests/                  -> Testes automatizados
 ```
 
-## Funcionalidades por entrega
+As regras de negócio ficam em funções puras dentro de `services/`: elas recebem o carrinho atual e devolvem um novo carrinho, sem depender do Flask nem da sessão. Por isso podem ser testadas isoladamente.
 
-- **AC1** (14/09): Catálogo de produtos — listagem e detalhe de canecas, banco migrado para PostgreSQL (Aiven), containerização com Docker
-- **AC2** (13/10): Carrinho de compras — sessão, controle de estoque e testes automatizados
-- **AC3** (08/11): Finalização do pedido (checkout)
-- **Entrega final** (22/11): Painel administrativo + integração completa + pipeline CI/CD
+## 📋 Funcionalidades do Sistema (ACs)
 
-## AC2 — Carrinho de compras
+O sistema é entregue em etapas, uma para cada avaliação:
 
-O cliente escolhe uma opção de caneca na página do produto e a adiciona ao carrinho. O carrinho fica guardado na **sessão do navegador** (cookie assinado do Flask), sem exigir login.
+### 1. Catálogo de Produtos (AC1) — concluída
 
-### Funcionalidades
+* Listagem dos produtos (canecas) em uma vitrine com imagem e preço.
+* Página de detalhes do produto, com as opções (variantes) disponíveis e o estoque de cada uma.
+* Conexão com o banco PostgreSQL e criação da estrutura de tabelas na inicialização.
 
-- Adicionar uma opção (variante) de caneca ao carrinho
-- Alterar a quantidade de um item e remover itens
-- Esvaziar o carrinho
-- Subtotal por item, total geral e contador de canecas no cabeçalho
-- Mensagens de confirmação e de erro após cada ação
+### 2. Carrinho de Compras (AC2) — concluída
 
-### Regras de negócio
+* Adicionar uma opção de caneca ao carrinho direto da página do produto (botão "Esgotado" quando não há estoque).
+* Página do carrinho (`/carrinho`) com imagem, preço unitário, quantidade, subtotal de cada item e **total do pedido**.
+* Alterar a quantidade, remover um item ou esvaziar o carrinho.
+* Contador de itens no cabeçalho, visível em todas as páginas: `Carrinho (3)`.
+* Mensagens de feedback ao usuário (item adicionado, estoque insuficiente, carrinho esvaziado).
 
-- Só é possível adicionar uma opção que existe e tem estoque
-- A quantidade no carrinho nunca ultrapassa o estoque da opção
-- Quantidade 0 na atualização remove o item
-- Valores em reais são calculados com `Decimal`, sem erro de ponto flutuante
-- Se o estoque cair depois que o item foi ao carrinho, a tela avisa e pede ajuste (o AC3 usará isso para bloquear o pedido)
+**Regras de negócio implementadas:**
 
-### Rotas
+* Só é possível adicionar uma opção que existe e tem estoque.
+* A quantidade no carrinho nunca ultrapassa o estoque da opção.
+* Atualizar a quantidade para 0 (ou menos) remove o item.
+* Valores em reais são calculados com `Decimal`, sem erros de ponto flutuante.
+* O carrinho fica guardado na sessão do navegador (cookie assinado), sem exigir login.
 
-| Método | Rota | Função |
-|---|---|---|
-| GET | `/carrinho` | Mostra o carrinho |
-| POST | `/carrinho/adicionar/<variante_id>` | Adiciona uma caneca |
-| POST | `/carrinho/atualizar/<variante_id>` | Altera a quantidade |
-| POST | `/carrinho/remover/<variante_id>` | Remove um item |
+**Rotas do carrinho:**
+
+| Método | Rota | Ação |
+|--------|------|------|
+| GET | `/carrinho` | Exibe o carrinho e o total |
+| POST | `/carrinho/adicionar/<id>` | Adiciona uma opção ao carrinho |
+| POST | `/carrinho/atualizar/<id>` | Altera a quantidade de um item |
+| POST | `/carrinho/remover/<id>` | Remove um item |
 | POST | `/carrinho/limpar` | Esvazia o carrinho |
 
-As rotas que alteram o carrinho aceitam apenas `POST`, e após cada uma o usuário é redirecionado para `/carrinho`.
+### 3. Finalização do Pedido (AC3) — em desenvolvimento
 
-### Decisões de projeto
+* Fluxo de checkout que grava o pedido no banco (tabelas de pedidos e itens do pedido).
+* Cálculo do total final e tela de confirmação do pedido.
+* Baixa automática do estoque ao concluir a compra.
 
-- O carrinho é um dicionário `{id_da_variante: quantidade}` guardado na sessão do Flask
-- As funções de `services/carrinho_service.py` recebem o carrinho atual e devolvem um **novo** carrinho, sem acessar a sessão. Isso separa a regra de negócio da apresentação e permite testar sem o Flask
-- O carrinho guarda **variantes** (as opções de cada caneca), pois é a variante que tem o estoque
+### 4. Integração Completa (Entrega Final) — planejada
 
-## Como rodar
+* Integração de todos os módulos, ajustes finais e apresentação do sistema completo.
 
-### Variáveis de ambiente
+## 🚀 Como Executar o Projeto
 
-Crie um arquivo `.env` na raiz do projeto (ele não vai para o repositório):
+O projeto roda em um container Docker e se conecta a um banco PostgreSQL hospedado na nuvem.
 
-```
-DATABASE_URL=postgresql://usuario:senha@host:porta/defaultdb?sslmode=require
-SECRET_KEY=uma_chave_aleatoria_longa
-```
+### Pré-requisitos
 
-- `DATABASE_URL`: conexão com o PostgreSQL
-- `SECRET_KEY`: assina o cookie da sessão (usada pelo carrinho). Para gerar uma: `python -c "import secrets; print(secrets.token_hex(32))"`
+* [Docker](https://www.docker.com/) instalado e em execução.
+* [Git](https://git-scm.com/) para clonar o repositório.
+* As credenciais do banco de dados (`DATABASE_URL`). Por segurança elas **não** ficam no repositório; solicite ao autor.
 
-### Localmente (Python)
+### Passo a Passo
+
+**1. Clone o repositório:**
 
 ```bash
-pip install -r requirements.txt
-python app.py
+git clone https://github.com/AlexOlimpio/canecas-shop.git
+cd canecas-shop
 ```
 
-Acesse: http://localhost:5000
+**2. Crie o arquivo `.env` na raiz do projeto** com o conteúdo abaixo (substitua pelos valores reais):
 
-### Com Docker
+```env
+DATABASE_URL=postgresql://usuario:senha@host:porta/banco?sslmode=require
+SECRET_KEY=uma-chave-secreta-qualquer
+```
+
+**3. Construa a imagem Docker:**
 
 ```bash
 docker build -t canecas-shop .
-docker run --rm -p 5000:5000 --env-file .env canecas-shop
 ```
 
-Acesse: http://localhost:5000
+**4. Inicie a aplicação:**
 
-## Rodar os testes
+```bash
+docker run --rm -p 5000:5000 --env-file .env -v ${PWD}:/app canecas-shop gunicorn --reload --bind 0.0.0.0:5000 app:app
+```
 
-Há 31 testes automatizados: 19 do service do carrinho, 7 das rotas do carrinho e 5 do catálogo (AC1). Os testes do carrinho não acessam o banco real.
+**5. Acesse no navegador:** http://localhost:5000
 
-### Com Docker
+> No Linux/macOS use `$(pwd)` no lugar de `${PWD}`.
 
-A imagem não inclui o pytest (ferramenta de desenvolvimento), então ele é instalado no container descartável:
+### Sem Docker (opcional)
+
+Com Python 3 instalado e o `.env` configurado:
+
+```bash
+pip install -r requirements.txt
+flask --app app run --port 5000
+```
+
+## 🧪 Testes Automatizados
+
+O projeto tem 31 testes: regras do carrinho (service), rotas HTTP do carrinho e o catálogo da AC1. Para executar com Docker:
 
 ```bash
 docker run --rm --env-file .env -v ${PWD}:/app canecas-shop sh -c "pip install -q pytest && python -m pytest -q"
 ```
 
-### Localmente
+Ou localmente: `pip install pytest && python -m pytest -q`.
 
-```bash
-pip install pytest
-pytest tests/ -v
-```
+A cada `push`, o GitHub Actions ("CI - Testes Automatizados") roda a suíte completa.
 
-## Links
+## 🔗 Links do Projeto
 
-- Link do GitHub: https://github.com/AlexOlimpio/canecas-shop
-- Board do projeto: [github.com/users/AlexOlimpio/projects/2](https://github.com/users/AlexOlimpio/projects/2)
-- Vídeo de apresentação AC1: [adicionar link]
-- Vídeo de apresentação AC2: [adicionar link]
-- Vídeo de apresentação AC3: [adicionar link]
+* **Repositório:** https://github.com/AlexOlimpio/canecas-shop
+* **Quadro de tarefas (GitHub Projects):** https://github.com/users/AlexOlimpio/projects/2
+* **Aplicação online (Render):** https://canecas-shop.onrender.com
+  *(plano gratuito: o primeiro acesso pode levar cerca de 1 minuto para "acordar" o servidor)*
+* **Vídeo de apresentação da AC2:** [adicionar link]
