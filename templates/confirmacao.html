@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Pedido #{{ pedido.id }} confirmado - Canecas Shop{% endblock %}
+{% block content %}
+<div style="text-align: center; padding: 24px 0 32px;">
+    <div style="font-size: 2.5rem; margin-bottom: 8px; color: var(--glaze);">&#10003;</div>
+    <h1 style="font-family: 'Fraunces', serif; font-weight: 500; font-size: 1.8rem; margin-bottom: 8px;">Pedido confirmado!</h1>
+    <p style="color: var(--ink-soft); font-size: 0.95rem;">Pedido <strong>#{{ pedido.id }}</strong> realizado com sucesso.</p>
+</div>
+
+<div style="display: flex; gap: 40px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 24px;">
+
+    <!-- Itens do pedido -->
+    <div style="flex: 1; min-width: 260px;">
+        <h2 style="font-family: 'Fraunces', serif; font-weight: 500; font-size: 1.2rem; margin-bottom: 16px;">Itens do pedido</h2>
+        {% for item in pedido.itens %}
+        <div style="display: flex; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line);">
+            <img src="{{ item.imagem_url }}" alt="{{ item.variante_nome }}" style="width: 56px; height: 56px; object-fit: cover;">
+            <div style="flex: 1;">
+                <p style="font-size: 0.9rem;">{{ item.produto_nome }}</p>
+                <p style="color: var(--ink-soft); font-size: 0.8rem;">{{ item.variante_nome }} &times; {{ item.quantidade }}</p>
+                <p style="color: var(--ink-soft); font-size: 0.8rem;">{{ item.preco_formatado }} cada</p>
+            </div>
+            <strong style="font-family: 'Fraunces', serif; font-size: 0.95rem;">{{ item.subtotal_formatado }}</strong>
+        </div>
+        {% endfor %}
+        <div style="display: flex; justify-content: space-between; padding: 16px 0;">
+            <span style="font-size: 1.1rem;">Total do pedido</span>
+            <strong style="font-family: 'Fraunces', serif; font-size: 1.4rem; color: var(--clay);">{{ pedido.total_formatado }}</strong>
+        </div>
+    </div>
+
+    <!-- Endereço de entrega -->
+    <div style="flex: 1; min-width: 240px;">
+        <h2 style="font-family: 'Fraunces', serif; font-weight: 500; font-size: 1.2rem; margin-bottom: 16px;">Endereço de entrega</h2>
+        <div style="background: var(--surface); padding: 20px; border: 1px solid var(--line);">
+            <p style="font-weight: 500; margin-bottom: 8px;">{{ pedido.nome_cliente }}</p>
+            <p style="color: var(--ink-soft); font-size: 0.9rem; line-height: 1.6;">
+                {{ pedido.endereco }}<br>
+                {{ pedido.cidade }} — {{ pedido.estado }}<br>
+                CEP: {{ pedido.cep }}
+            </p>
+        </div>
+    </div>
+</div>
+
+<div style="text-align: center; padding: 32px 0;">
+    <a href="/" style="display: inline-block; padding: 12px 24px; background: var(--clay); color: #fff; text-decoration: none; font-size: 0.9rem;">Voltar ao catálogo</a>
+</div>
+{% endblock %}

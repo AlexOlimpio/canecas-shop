@@ -53,9 +53,15 @@
     <div style="text-align: right;">
         <p style="color: var(--ink-soft); font-size: 0.85rem;">{{ carrinho.quantidade_total }} caneca(s)</p>
         <p style="font-family: 'Fraunces', serif; font-size: 1.6rem; color: var(--clay);">Total: {{ carrinho.total_formatado }}</p>
+        {% if carrinho.tem_item_indisponivel %}
         <button disabled style="margin-top: 12px; padding: 12px 24px; background: var(--line); color: var(--ink-soft); border: none; font-family: 'Work Sans', sans-serif; font-size: 0.9rem; cursor: not-allowed;">
-            Finalizar pedido — em breve
+            Ajuste o estoque para continuar
         </button>
+        {% else %}
+        <a href="/checkout" style="display: inline-block; margin-top: 12px; padding: 12px 24px; background: var(--glaze); color: #fff; text-decoration: none; font-family: 'Work Sans', sans-serif; font-size: 0.9rem; text-align: center;">
+            Finalizar pedido
+        </a>
+        {% endif %}
     </div>
 </div>
 {% endif %}

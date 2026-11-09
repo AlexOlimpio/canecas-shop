@@ -61,11 +61,32 @@ O sistema é entregue em etapas, uma para cada avaliação:
 | POST | `/carrinho/remover/<id>` | Remove um item |
 | POST | `/carrinho/limpar` | Esvazia o carrinho |
 
-### 3. Finalização do Pedido (AC3) — em desenvolvimento
+### 3. Finalização do Pedido (AC3) — concluída
 
-* Fluxo de checkout que grava o pedido no banco (tabelas de pedidos e itens do pedido).
-* Cálculo do total final e tela de confirmação do pedido.
-* Baixa automática do estoque ao concluir a compra.
+* Botão "Finalizar pedido" no carrinho (desabilitado quando há itens com estoque insuficiente).
+* Página de checkout (`/checkout`) com formulário de endereço de entrega e resumo dos itens.
+* Validação server-side dos campos de endereço (nome, rua, cidade, UF válida, CEP com 8 dígitos).
+* Gravação do pedido nas tabelas `pedidos` e `itens_pedido`, com baixa automática do estoque.
+* Tela de confirmação (`/pedido/<id>/confirmacao`) exibindo itens, total e endereço do pedido.
+* Carrinho esvaziado automaticamente após a conclusão do pedido.
+* Acesso à confirmação protegido por sessão (somente quem finalizou pode ver).
+
+**Regras de negócio implementadas:**
+
+* O checkout só é acessível com carrinho não-vazio e sem itens com estoque insuficiente.
+* Todos os campos de endereço são obrigatórios; UF é validada contra a lista oficial de estados.
+* CEP aceita formato com ou sem traço e é normalizado para 8 dígitos.
+* O estoque é conferido novamente no momento do checkout, não só ao adicionar ao carrinho.
+* A criação do pedido, a inserção dos itens e a baixa de estoque ocorrem numa única transação
+  (se qualquer passo falhar, nada é gravado).
+
+**Rotas do checkout:**
+
+| Método | Rota | Ação |
+|--------|------|------|
+| GET | `/checkout` | Formulário de endereço + resumo |
+| POST | `/checkout` | Grava o pedido e redireciona à confirmação |
+| GET | `/pedido/<id>/confirmacao` | Exibe confirmação do pedido |
 
 ### 4. Integração Completa (Entrega Final) — planejada
 
@@ -124,7 +145,7 @@ flask --app app run --port 5000
 
 ## 🧪 Testes Automatizados
 
-O projeto tem 31 testes: regras do carrinho (service), rotas HTTP do carrinho e o catálogo da AC1. Para executar com Docker:
+O projeto tem 50 testes: regras do carrinho e do pedido (services), rotas HTTP do carrinho e do checkout, e o catálogo da AC1. Para executar com Docker:
 
 ```bash
 docker run --rm --env-file .env -v ${PWD}:/app canecas-shop sh -c "pip install -q pytest && python -m pytest -q"

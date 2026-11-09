@@ -47,23 +47,40 @@ def init_db():
         )
     """)
 
-    # AC2/AC3 (carrinho e pedidos) — tabelas já preparadas para os próximos sprints
+    # AC2/AC3 (carrinho e pedidos)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS pedidos (
             id SERIAL PRIMARY KEY,
             data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            total REAL DEFAULT 0
+            total REAL DEFAULT 0,
+            nome_cliente TEXT,
+            endereco TEXT,
+            cidade TEXT,
+            estado TEXT,
+            cep TEXT
         )
     """)
+
+    # Adiciona colunas de endereço caso a tabela já exista sem elas
+    for coluna in ("nome_cliente", "endereco", "cidade", "estado", "cep"):
+        cursor.execute(f"""
+            ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS {coluna} TEXT
+        """)
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS itens_pedido (
             id SERIAL PRIMARY KEY,
             pedido_id INTEGER REFERENCES pedidos (id),
-            produto_id INTEGER REFERENCES produtos (id),
+            variante_id INTEGER REFERENCES variantes (id),
             quantidade INTEGER,
             preco_unitario REAL
         )
+    """)
+
+    # Adiciona variante_id caso a tabela já exista sem ela
+    cursor.execute("""
+        ALTER TABLE itens_pedido ADD COLUMN IF NOT EXISTS
+        variante_id INTEGER REFERENCES variantes (id)
     """)
 
     conn.commit()
@@ -171,3 +188,67 @@ def buscar_variante_com_produto(variante_id):
     cursor.close()
     conn.close()
     return item
+
+
+# --------------- AC3: Pedidos ---------------
+
+def criar_pedido(total, nome_cliente, endereco, cidade, estado, cep, itens):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            INSERT INTO pedidos (total, nome_cliente, endereco, cidade, estado, cep)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id
+            """,
+            (float(total), nome_cliente, endereco, cidade, estado, cep),
+        )
+        pedido_id = cursor.fetchone()["id"]
+
+        for item in itens:
+            cursor.execute(
+                """
+                INSERT INTO itens_pedido (pedido_id, variante_id, quantidade, preco_unitario)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (pedido_id, item["variante_id"], item["quantidade"], float(item["preco_unitario"])),
+            )
+            cursor.execute(
+                "UPDATE variantes SET estoque = estoque - %s WHERE id = %s",
+                (item["quantidade"], item["variante_id"]),
+            )
+
+        conn.commit()
+        return pedido_id
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def buscar_pedido_por_id(pedido_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM pedidos WHERE id = %s", (pedido_id,))
+    pedido = cursor.fetchone()
+
+    if pedido:
+        cursor.execute(
+            """
+            SELECT ip.*, v.nome AS variante_nome, v.imagem_url,
+                   p.nome AS produto_nome
+            FROM itens_pedido ip
+            JOIN variantes v ON v.id = ip.variante_id
+            JOIN produtos p ON p.id = v.produto_id
+            WHERE ip.pedido_id = %s
+            """,
+            (pedido_id,),
+        )
+        pedido["itens"] = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+    return pedido
